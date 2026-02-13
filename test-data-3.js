@@ -91,9 +91,85 @@ function calculateMBTI() {
     return (s.E >= s.I ? 'E' : 'I') + (s.S >= s.N ? 'S' : 'N') + (s.T >= s.F ? 'T' : 'F') + (s.J >= s.P ? 'J' : 'P');
 }
 
+function getDimensionScores() {
+    const s = { E:0, I:0, S:0, N:0, T:0, F:0, J:0, P:0 };
+    answers.forEach((a, i) => { if (a !== null) s[questions[i].options[a].type]++; });
+
+    return [
+        { pair: 'E-I', left: 'E', right: 'I', leftScore: s.E, rightScore: s.I, label: '에너지 회복 방식' },
+        { pair: 'S-N', left: 'S', right: 'N', leftScore: s.S, rightScore: s.N, label: '정보를 받아들이는 방식' },
+        { pair: 'T-F', left: 'T', right: 'F', leftScore: s.T, rightScore: s.F, label: '의사결정 우선순위' },
+        { pair: 'J-P', left: 'J', right: 'P', leftScore: s.J, rightScore: s.P, label: '생활과 일정 운영 방식' }
+    ];
+}
+
+function getBalanceComment(d) {
+    const gap = Math.abs(d.leftScore - d.rightScore);
+    const dominant = d.leftScore >= d.rightScore ? d.left : d.right;
+
+    if (gap <= 2) {
+        return `${d.label}에서 ${d.left}와 ${d.right} 성향이 비교적 균형 있게 나타났어요. 상황에 따라 유연하게 방식을 바꿀 수 있는 적응력이 강점입니다.`;
+    }
+    if (gap <= 5) {
+        return `${d.label}에서는 ${dominant} 성향이 조금 더 뚜렷하게 보입니다. 기본 선호는 분명하지만 필요할 때 반대 성향도 활용할 수 있는 현실적인 균형이 있습니다.`;
+    }
+    return `${d.label}에서는 ${dominant} 성향이 매우 선명하게 나타났어요. 강점을 크게 발휘할 수 있지만, 피로하거나 압박이 클 때는 관점이 한쪽으로 쏠릴 수 있어 의식적인 균형이 도움이 됩니다.`;
+}
+
+function getEmpathyInsight(dimensionScores) {
+    const tips = dimensionScores.map(d => `<p style="margin-top:8px">• <strong>${d.pair}</strong>: ${getBalanceComment(d)}</p>`).join('');
+    return `
+        <p>요즘 "나는 왜 이런 방식으로 반응할까?"라는 생각을 자주 하셨다면, 그 질문 자체가 이미 자기이해를 향한 건강한 시작입니다. 이 결과는 당신을 한 단어로 규정하려는 도구가 아니라, 반복되는 패턴을 이해하고 관계와 삶을 더 잘 조율하기 위한 지도에 가깝습니다.</p>
+        <p style="margin-top:12px">특히 스트레스가 높아질수록 사람은 평소의 선호를 더 강하게 사용하거나, 반대로 익숙하지 않은 방식으로 버티느라 지치기도 해요. 아래 분석은 "정답"이 아니라 지금 시점의 "경향"을 보여줍니다. 스스로를 비난하기보다 "아, 내가 그래서 힘들었구나" 하고 이해해보세요.</p>
+        ${tips}
+    `;
+}
+
+function getGrowthActions(mbti) {
+    const map = {
+        I: '하루 10~15분, 감정과 생각을 짧게 기록해보세요. 내면을 언어화하면 관계에서 오해가 줄어듭니다.',
+        E: '대화가 많은 날에는 의도적으로 15분의 고요한 시간을 넣어보세요. 에너지 회복의 질이 눈에 띄게 달라집니다.',
+        S: '이번 주 한 번은 익숙한 방식 대신 새로운 방법을 시도해보세요. 작은 실험이 성장의 문을 엽니다.',
+        N: '아이디어를 떠올린 뒤, 바로 실행 가능한 한 단계(시간/장소/방법)를 적어보세요. 통찰이 현실이 됩니다.',
+        T: '중요한 결정 전 "이 결정이 사람에게 어떤 감정적 영향을 줄까?"를 1분만 점검해보세요.',
+        F: '공감 후에는 "그래서 지금 필요한 선택은 무엇인지"를 한 문장으로 정리해보세요. 따뜻함과 분별이 함께 갑니다.',
+        J: '계획표에 여유 칸(버퍼 타임)을 미리 넣어보세요. 계획을 지키는 힘과 유연성이 동시에 올라갑니다.',
+        P: '시작이 빠른 강점을 살리기 위해 "마감 24시간 전 1차 완료" 규칙을 만들어보세요.'
+    };
+
+    return [
+        map[mbti[0]],
+        map[mbti[1]],
+        map[mbti[2]],
+        map[mbti[3]]
+    ];
+}
+
+function renderDimensionMeter(d) {
+    const total = d.leftScore + d.rightScore;
+    const leftPct = Math.round((d.leftScore / total) * 100);
+    const rightPct = 100 - leftPct;
+
+    return `
+        <div style="margin-bottom:14px">
+            <p style="font-size:13px;color:var(--text-primary);margin-bottom:6px">${d.label} (${d.pair})</p>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-tertiary);margin-bottom:6px">
+                <span>${d.left} ${d.leftScore}점</span>
+                <span>${d.right} ${d.rightScore}점</span>
+            </div>
+            <div style="height:8px;background:var(--surface-2);border-radius:9999px;overflow:hidden;display:flex">
+                <div style="width:${leftPct}%;background:var(--accent)"></div>
+                <div style="width:${rightPct}%;background:rgba(255,255,255,0.2)"></div>
+            </div>
+        </div>
+    `;
+}
+
 function showResult() {
     const mbti = calculateMBTI();
     const c = bibleCharacters[mbti];
+    const dimensionScores = getDimensionScores();
+    const growthActions = getGrowthActions(mbti);
     document.getElementById('testScreen').style.display = 'none';
     const rs = document.getElementById('resultScreen');
     rs.style.display = 'block';
@@ -104,10 +180,17 @@ function showResult() {
         <h1 class="result-name">${c.name}</h1>
         <p class="result-title">${c.title}</p>
         <div class="result-card">
+            <div class="result-section">
+                <h3>🧭 정밀 지표 분석</h3>
+                <p style="margin-bottom:14px">본 결과는 48문항 응답을 기준으로 한 성향 분석입니다. MBTI는 성격 "진단"이 아니라 선호 경향을 보는 도구이며, 상황과 성장에 따라 표현 방식은 충분히 달라질 수 있습니다.</p>
+                ${dimensionScores.map(renderDimensionMeter).join('')}
+            </div>
             <div class="result-section"><h3>📖 성경 속 이야기</h3><p>${c.description}</p></div>
             <div class="result-section"><h3>✨ 핵심 특성</h3><div class="result-traits">${c.traits.map(t=>`<span class="trait-tag">${t}</span>`).join('')}</div></div>
+            <div class="result-section"><h3>🫶 공감 기반 해석</h3>${getEmpathyInsight(dimensionScores)}</div>
             <div class="result-section"><h3>💪 나의 강점</h3><p>${c.strengthsDetail}</p></div>
             <div class="result-section"><h3>⚡ 나의 약점</h3><p>${c.weaknessesDetail}</p></div>
+            <div class="result-section"><h3>🛠️ 이번 주 성장 실천 가이드</h3>${growthActions.map(a=>`<p style="margin-top:8px">• ${a}</p>`).join('')}</div>
             <div class="result-section"><h3>🙏 신앙적 조언</h3><p>${c.faithAdvice}</p></div>
             <div class="result-section"><h3>📜 어울리는 말씀</h3><div class="result-verse"><p>"${c.verseText}"</p><cite>- ${c.verseRef}</cite></div><p style="margin-top:12px;font-size:14px;color:var(--text-secondary)">${c.verseExplanation}</p></div>
             <div class="result-section"><h3>🤝 잘 어울리는 성경 인물</h3><p><strong>${c.compatibleCharacter}</strong></p><p style="margin-top:8px">${c.compatibleReason}</p></div>
